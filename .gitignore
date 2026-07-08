@@ -1,0 +1,24 @@
+# Dependencies
+**/node_modules
+
+# Next.js
+**/.next
+
+# Build
+**/dist
+**/build
+
+# Environment
+**/.env
+**/.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
