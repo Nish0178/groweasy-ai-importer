@@ -1,16 +1,20 @@
-import axios from "axios";
+const API_URL = "http://localhost:5000/api/import";
 
-const API = "http://localhost:5000/api/import";
-
-export async function uploadCSV(file: File) {
+export async function uploadCsv(file: File) {
   const formData = new FormData();
 
   formData.append("file", file);
 
-  const response = await axios.post(
-    `${API}/upload`,
-    formData
-  );
+  const response = await fetch(`${API_URL}/upload`, {
+    method: "POST",
+    body: formData,
+  });
 
-  return response.data;
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to upload CSV.");
+  }
+
+  return data;
 }

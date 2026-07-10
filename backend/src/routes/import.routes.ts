@@ -1,13 +1,15 @@
 import { Router } from "express";
-import { upload } from "../middleware/upload.middleware";
-import { uploadCSV } from "../controllers/import.controller";
+import multer from "multer";
+
+import upload from "../middleware/upload.middleware";
+import { uploadCsvController } from "../controllers/import.controller";
 
 const router = Router();
 
 router.post(
   "/upload",
   upload.single("file"),
-  uploadCSV
+  uploadCsvController
 );
 
 export default router;

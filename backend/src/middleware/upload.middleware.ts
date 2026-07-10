@@ -1,28 +1,69 @@
-import multer from "multer";
+import { randomInt } from "node:crypto";
+import fs from "node:fs";
 import path from "node:path";
+import multer from "multer";
+
+// =======================================
+// Ensure uploads directory exists
+// =======================================
+
+const uploadDir = "uploads";
+const defaultMaxUploadSizeBytes = 10 * 1024 * 1024;
+const maxUploadSizeBytes = (() => {
+  const configuredSize = Number.parseInt(
+    process.env.MAX_UPLOAD_SIZE ?? `${defaultMaxUploadSizeBytes}`,
+    10
+  );
+
+  if (Number.isFinite(configuredSize) && configuredSize > 0) {
+    return Math.min(configuredSize, defaultMaxUploadSizeBytes);
+  }
+
+  return defaultMaxUploadSizeBytes;
+})();
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// =======================================
+// Storage
+// =======================================
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadDir);
   },
 
   filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(
-      Math.random() * 1e9
-    )}${path.extname(file.originalname)}`;
+    const uniqueName = `${Date.now()}-${randomInt(1e9)}${path.extname(
+      file.originalname
+    )}`;
 
     cb(null, uniqueName);
   },
 });
+
+// =======================================
+// File Filter
+// =======================================
 
 const fileFilter: multer.Options["fileFilter"] = (
   _req,
   file,
   cb
 ) => {
+  const acceptedMimeTypes = new Set([
+    "text/csv",
+    "application/vnd.ms-excel",
+    "application/csv",
+    "text/plain",
+    "text/comma-separated-values",
+  ]);
+
   if (
-    file.mimetype === "text/csv" ||
-    file.originalname.endsWith(".csv")
+    acceptedMimeTypes.has(file.mimetype) ||
+    file.originalname.toLowerCase().endsWith(".csv")
   ) {
     cb(null, true);
   } else {
@@ -30,10 +71,16 @@ const fileFilter: multer.Options["fileFilter"] = (
   }
 };
 
-export const upload = multer({
+// =======================================
+// Multer Instance
+// =======================================
+
+const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: maxUploadSizeBytes,
   },
 });
+
+export default upload;

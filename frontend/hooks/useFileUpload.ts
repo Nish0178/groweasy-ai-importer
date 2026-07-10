@@ -1,22 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { uploadCsv } from "@/services/upload.service";
+
 import type { UploadedFile } from "@/types/upload";
 import type { CsvRow } from "@/types/csv";
+
 import { parseCsv } from "@/utils/parseCsv";
 
 export function useFileUpload() {
   const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
+
   const [rows, setRows] = useState<CsvRow[]>([]);
+
   const [loading, setLoading] = useState(false);
+
+  const [uploading, setUploading] = useState(false);
+
+  const [uploaded, setUploaded] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
+  // ==========================
+  // Select & Parse CSV
+  // ==========================
   const selectFile = async (file: File) => {
     try {
       setLoading(true);
       setError(null);
+      setUploaded(false);
 
-      // Only allow CSV files
       if (
         file.type !== "text/csv" &&
         !file.name.toLowerCase().endsWith(".csv")
@@ -24,7 +37,6 @@ export function useFileUpload() {
         throw new Error("Please upload a valid CSV file.");
       }
 
-      // Parse CSV
       const parsedRows = await parseCsv(file);
 
       setRows(parsedRows);
@@ -49,18 +61,47 @@ export function useFileUpload() {
     }
   };
 
+  // ==========================
+  // Remove Selected File
+  // ==========================
   const clearFile = () => {
     setSelectedFile(null);
     setRows([]);
     setError(null);
+    setUploaded(false);
+  };
+
+  // ==========================
+  // Confirm Import
+  // ==========================
+  const confirmImport = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setUploading(true);
+      setError(null);
+
+      await uploadCsv(selectedFile.file);
+
+      setUploaded(true);
+    } catch (err) {
+      console.error(err);
+
+      setError("Failed to upload CSV.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return {
     selectedFile,
     rows,
     loading,
+    uploading,
+    uploaded,
     error,
     selectFile,
     clearFile,
+    confirmImport,
   };
 }

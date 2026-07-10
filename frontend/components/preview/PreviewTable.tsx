@@ -3,7 +3,7 @@
 import type { CsvRow } from "@/types/csv";
 
 interface Props {
-  rows: CsvRow[];
+  readonly rows: CsvRow[];
 }
 
 export default function PreviewTable({ rows }: Props) {
@@ -28,18 +28,21 @@ export default function PreviewTable({ rows }: Props) {
         </thead>
 
         <tbody>
-          {rows.slice(0, 10).map((row, index) => (
-            <tr key={index} className="border-b">
-              {headers.map((header) => (
-                <td
-                  key={header}
-                  className="px-5 py-3 text-sm"
-                >
-                  {row[header]}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.slice(0, 10).map((row, index) => {
+            const rowKey = `${index}-${headers
+              .map((header) => String(row[header] ?? ""))
+              .join("|")}`;
+
+            return (
+              <tr key={rowKey} className="border-b">
+                {headers.map((header) => (
+                  <td key={header} className="px-5 py-3 text-sm">
+                    {row[header]}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

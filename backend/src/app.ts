@@ -5,10 +5,18 @@ import importRoutes from "./routes/import.routes";
 
 const app: Application = express();
 
-// ======================
+app.disable("x-powered-by");
+
+// =====================================
 // Global Middlewares
-// ======================
-app.use(cors());
+// =====================================
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
@@ -18,9 +26,10 @@ app.use(
   })
 );
 
-// ======================
-// Health Check Route
-// ======================
+// =====================================
+// Health Check
+// =====================================
+
 app.get("/api/health", (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -29,14 +38,16 @@ app.get("/api/health", (req: Request, res: Response) => {
   });
 });
 
-// ======================
-// Import Routes
-// ======================
+// =====================================
+// API Routes
+// =====================================
+
 app.use("/api/import", importRoutes);
 
-// ======================
-// 404 Route
-// ======================
+// =====================================
+// 404 Handler
+// =====================================
+
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,

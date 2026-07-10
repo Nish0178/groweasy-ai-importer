@@ -5,7 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { UploadCloud } from "lucide-react";
 
 interface DropzoneProps {
-  onFileSelect: (file: File) => void;
+  readonly onFileSelect: (file: File) => void;
 }
 
 export default function Dropzone({
