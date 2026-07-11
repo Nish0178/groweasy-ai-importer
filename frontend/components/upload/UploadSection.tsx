@@ -14,16 +14,17 @@ import { useFileUpload } from "@/hooks/useFileUpload";
 
 export default function UploadSection() {
   const {
-  selectedFile,
-  rows,
-  loading,
-  uploading,
-  uploaded,
-  error,
-  selectFile,
-  clearFile,
-  confirmImport,
-} = useFileUpload();
+    selectedFile,
+    rows,
+    loading,
+    uploading,
+    uploaded,
+    importResult,
+    error,
+    selectFile,
+    clearFile,
+    confirmImport,
+  } = useFileUpload();
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} Bytes`;
@@ -106,28 +107,40 @@ export default function UploadSection() {
           <>
             <PreviewTable rows={rows} />
 
-            <div className="mt-8 flex justify-end">
-
-              <button
-  onClick={confirmImport}
-  disabled={uploading}
-  className="rounded-xl bg-blue-600 px-8 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
->
-  {uploading ? (
-    <div className="flex items-center gap-2">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      Uploading...
-    </div>
-  ) : (
-    "Confirm Import"
-  )}
-</button>
-{uploaded && (
-  <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-green-700">
-    ✅ CSV uploaded successfully.
-  </div>
-)}
-
+            <div className="mt-8 flex flex-col items-end gap-4">
+              {error && (
+                <div className="w-full rounded-xl border border-red-200 bg-red-50 p-4 text-red-600">
+                  ⚠️ {error}
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={confirmImport}
+                  disabled={uploading || uploaded}
+                  className={`rounded-xl px-8 py-3 font-semibold text-white transition disabled:cursor-not-allowed ${
+                    uploaded
+                      ? "bg-green-600 disabled:opacity-100"
+                      : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                  }`}
+                >
+                  {uploading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing AI Import...
+                    </div>
+                  ) : uploaded ? (
+                    "Imported Successfully ✓"
+                  ) : (
+                    "Confirm Import"
+                  )}
+                </button>
+              </div>
+              {uploaded && (
+                <div className="w-full rounded-xl border border-green-200 bg-green-50 p-4 text-green-700">
+                  ✅ Successfully imported {importResult?.totalImported ?? 0} CRM records!
+                  {importResult?.totalSkipped ? ` (${importResult.totalSkipped} skipped)` : ""}
+                </div>
+              )}
             </div>
           </>
         )}

@@ -19,6 +19,12 @@ export function useFileUpload() {
 
   const [uploaded, setUploaded] = useState(false);
 
+  const [importResult, setImportResult] = useState<{
+    totalImported: number;
+    totalSkipped: number;
+    records: any[];
+  } | null>(null);
+
   const [error, setError] = useState<string | null>(null);
 
   // ==========================
@@ -29,6 +35,7 @@ export function useFileUpload() {
       setLoading(true);
       setError(null);
       setUploaded(false);
+      setImportResult(null);
 
       if (
         file.type !== "text/csv" &&
@@ -50,6 +57,7 @@ export function useFileUpload() {
     } catch (err) {
       setRows([]);
       setSelectedFile(null);
+      setImportResult(null);
 
       setError(
         err instanceof Error
@@ -69,25 +77,34 @@ export function useFileUpload() {
     setRows([]);
     setError(null);
     setUploaded(false);
+    setImportResult(null);
   };
 
   // ==========================
   // Confirm Import
   // ==========================
   const confirmImport = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || uploading || uploaded) return;
 
     try {
       setUploading(true);
       setError(null);
 
-      await uploadCsv(selectedFile.file);
+      const data = await uploadCsv(selectedFile.file);
+
+      setImportResult({
+        totalImported: data?.totalImported ?? 0,
+        totalSkipped: data?.totalSkipped ?? 0,
+        records: data?.records ?? [],
+      });
 
       setUploaded(true);
     } catch (err) {
-      console.error(err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to upload CSV.";
+      console.warn("CSV Upload Error:", errorMessage);
 
-      setError("Failed to upload CSV.");
+      setError(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -99,6 +116,7 @@ export function useFileUpload() {
     loading,
     uploading,
     uploaded,
+    importResult,
     error,
     selectFile,
     clearFile,

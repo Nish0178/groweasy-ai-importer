@@ -44,13 +44,15 @@ export async function uploadCsvController(
       skipEmptyLines: true,
     });
 
-    if (parsed.errors.length > 0) {
-      fs.unlinkSync(req.file.path);
+    const fatalErrors = parsed.errors.filter(
+      (e) => e.code !== "UndetectableDelimiter"
+    );
 
+    if (fatalErrors.length > 0 && (!parsed.data || parsed.data.length === 0)) {
       res.status(400).json({
         success: false,
         message: "Invalid CSV format.",
-        errors: parsed.errors,
+        errors: fatalErrors,
       });
       return;
     }
@@ -61,11 +63,6 @@ export async function uploadCsvController(
     // Process with AI
     // ==========================
     const result = await processCsv(rows);
-
-    // ==========================
-    // Delete Uploaded File
-    // ==========================
-    fs.unlinkSync(req.file.path);
 
     // ==========================
     // Response
@@ -79,14 +76,23 @@ export async function uploadCsvController(
   } catch (error) {
     console.error("Upload Controller Error:", error);
 
-    // Cleanup uploaded file if something failed
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to process CSV.";
 
     res.status(500).json({
       success: false,
-      message: "Failed to process CSV.",
+      message: errorMessage,
     });
+  } finally {
+    // ==========================
+    // Delete Uploaded File
+    // ==========================
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error("Failed to delete temp file:", err);
+      }
+    }
   }
 }
