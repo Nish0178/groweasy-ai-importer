@@ -135,12 +135,121 @@ export default function UploadSection() {
                   )}
                 </button>
               </div>
-              {uploaded && (
-                <div className="w-full rounded-xl border border-green-200 bg-green-50 p-4 text-green-700">
-                  ✅ Successfully imported {importResult?.totalImported ?? 0} CRM records!
-                  {importResult?.totalSkipped ? ` (${importResult.totalSkipped} skipped)` : ""}
-                </div>
-              )}
+             {uploaded && (
+  <div className="w-full rounded-xl border border-green-200 bg-green-50 p-5">
+    <p className="text-green-700 font-semibold">
+      ✅ Successfully imported {importResult?.totalImported ?? 0} CRM records!
+      {importResult?.totalSkipped
+        ? ` (${importResult.totalSkipped} skipped)`
+        : ""}
+    </p>
+
+    {importResult?.downloadUrl && (
+      <a
+        href={`http://localhost:5000${importResult.downloadUrl}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 inline-flex rounded-lg bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700"
+      >
+        📥 Download Excel Report
+      </a>
+    )}
+  </div>
+)}
+              {importResult && (
+  <div className="mt-8 space-y-6">
+
+    {/* Import Summary */}
+
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+      <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
+        <p className="text-sm text-slate-600">
+          Total Imported
+        </p>
+
+        <h2 className="mt-2 text-4xl font-bold text-green-600">
+          {importResult.totalImported}
+        </h2>
+      </div>
+
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+        <p className="text-sm text-slate-600">
+          Total Skipped
+        </p>
+
+        <h2 className="mt-2 text-4xl font-bold text-red-600">
+          {importResult.totalSkipped}
+        </h2>
+      </div>
+
+    </div>
+
+    {/* CRM Result Table */}
+
+    <div className="overflow-x-auto rounded-2xl border">
+
+      <table className="min-w-full">
+
+        <thead className="bg-slate-100">
+
+          <tr>
+
+            <th className="p-3 text-left">Name</th>
+
+            <th className="p-3 text-left">Email</th>
+
+            <th className="p-3 text-left">Mobile</th>
+
+            <th className="p-3 text-left">Company</th>
+
+            <th className="p-3 text-left">Status</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {importResult.records.map((record: any, index: number) => (
+
+            <tr
+              key={index}
+              className="border-t"
+            >
+
+              <td className="p-3">
+                {record.name}
+              </td>
+
+              <td className="p-3">
+                {record.email}
+              </td>
+
+              <td className="p-3">
+                {record.mobile_without_country_code}
+              </td>
+
+              <td className="p-3">
+                {record.company}
+              </td>
+
+              <td className="p-3">
+                {record.crm_status}
+              </td>
+
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+)}
             </div>
           </>
         )}

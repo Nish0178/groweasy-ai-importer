@@ -4,20 +4,37 @@ import { AiExtractionResponse } from "../types/crm.types";
 const BATCH_SIZE = 20;
 
 export async function processCsv(
-  records: any[]
+  records: Record<string, any>[]
 ): Promise<AiExtractionResponse> {
-  let finalRecords: any[] = [];
+  // Empty CSV
+  if (!records || records.length === 0) {
+    return {
+      records: [],
+      skipped: 0,
+    };
+  }
 
+  const finalRecords: any[] = [];
   let skipped = 0;
 
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const batch = records.slice(i, i + BATCH_SIZE);
 
-    const result = await extractCrmRecords(batch);
+    console.log(
+      `Processing batch ${i / BATCH_SIZE + 1} (${batch.length} records)`
+    );
 
-    finalRecords.push(...result.records);
+    try {
+      const result = await extractCrmRecords(batch);
 
-    skipped += result.skipped;
+      finalRecords.push(...result.records);
+
+      skipped += result.skipped;
+    } catch (error) {
+      console.error("Batch Processing Failed:", error);
+
+      skipped += batch.length;
+    }
   }
 
   return {

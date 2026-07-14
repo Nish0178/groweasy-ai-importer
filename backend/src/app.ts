@@ -1,5 +1,6 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
+import path from "node:path";
 
 import importRoutes from "./routes/import.routes";
 
@@ -45,10 +46,19 @@ app.use(
 );
 
 // =====================================
+// Serve Generated Excel Files
+// =====================================
+
+app.use(
+  "/exports",
+  express.static(path.join(process.cwd(), "exports"))
+);
+
+// =====================================
 // Health Check
 // =====================================
 
-app.get("/api/health", (req: Request, res: Response) => {
+app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "GrowEasy AI Importer Backend is running 🚀",
@@ -66,7 +76,7 @@ app.use("/api/import", importRoutes);
 // 404 Handler
 // =====================================
 
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: "Route Not Found",

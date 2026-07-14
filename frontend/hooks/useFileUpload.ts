@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
+
 import { uploadCsv } from "@/services/upload.service";
 
 import type { UploadedFile } from "@/types/upload";
 import type { CsvRow } from "@/types/csv";
+import type { ImportResult } from "@/types/result";
 
 import { parseCsv } from "@/utils/parseCsv";
 
 export function useFileUpload() {
-  const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
+  const [selectedFile, setSelectedFile] =
+    useState<UploadedFile | null>(null);
 
   const [rows, setRows] = useState<CsvRow[]>([]);
 
@@ -20,22 +23,28 @@ export function useFileUpload() {
   const [uploaded, setUploaded] = useState(false);
 
   const [importResult, setImportResult] = useState<{
-    totalImported: number;
-    totalSkipped: number;
-    records: any[];
-  } | null>(null);
+  totalImported: number;
+  totalSkipped: number;
+  records: any[];
+  downloadUrl?: string;
+} | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
 
-  // ==========================
+  // ==========================================
   // Select & Parse CSV
-  // ==========================
+  // ==========================================
+
   const selectFile = async (file: File) => {
     try {
       setLoading(true);
       setError(null);
       setUploaded(false);
       setImportResult(null);
+      setDownloadUrl(null);
+
+      // Validate CSV
 
       if (
         file.type !== "text/csv" &&
@@ -43,6 +52,8 @@ export function useFileUpload() {
       ) {
         throw new Error("Please upload a valid CSV file.");
       }
+
+      // Parse CSV
 
       const parsedRows = await parseCsv(file);
 
@@ -69,40 +80,54 @@ export function useFileUpload() {
     }
   };
 
-  // ==========================
-  // Remove Selected File
-  // ==========================
+  // ==========================================
+  // Clear Selected File
+  // ==========================================
+
   const clearFile = () => {
     setSelectedFile(null);
     setRows([]);
-    setError(null);
     setUploaded(false);
     setImportResult(null);
+    setDownloadUrl(null);
+    setError(null);
+    
   };
 
-  // ==========================
+  // ==========================================
   // Confirm Import
-  // ==========================
+  // ==========================================
+
   const confirmImport = async () => {
-    if (!selectedFile || uploading || uploaded) return;
+    if (!selectedFile || uploading || uploaded) {
+      return;
+    }
 
     try {
       setUploading(true);
       setError(null);
 
-      const data = await uploadCsv(selectedFile.file);
+      const data: ImportResult = await uploadCsv(
+        selectedFile.file
+         );
+         setDownloadUrl(data.downloadUrl ?? null);
 
       setImportResult({
-        totalImported: data?.totalImported ?? 0,
-        totalSkipped: data?.totalSkipped ?? 0,
-        records: data?.records ?? [],
+        success: data.success ?? true,
+        totalImported: data.totalImported ?? 0,
+        totalSkipped: data.totalSkipped ?? 0,
+        records: data.records ?? [],
+        downloadUrl: data.downloadUrl,
       });
 
       setUploaded(true);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to upload CSV.";
-      console.warn("CSV Upload Error:", errorMessage);
+        err instanceof Error
+          ? err.message
+          : "Failed to upload CSV.";
+
+      console.error("CSV Upload Error:", errorMessage);
 
       setError(errorMessage);
     } finally {
@@ -121,5 +146,6 @@ export function useFileUpload() {
     selectFile,
     clearFile,
     confirmImport,
+    downloadUrl,
   };
 }
