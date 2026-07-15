@@ -22,15 +22,15 @@ export function useFileUpload() {
 
   const [uploaded, setUploaded] = useState(false);
 
-  const [importResult, setImportResult] = useState<{
-  totalImported: number;
-  totalSkipped: number;
-  records: any[];
-  downloadUrl?: string;
-} | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  // ✅ Fixed Type
+  const [importResult, setImportResult] =
+    useState<ImportResult | null>(null);
 
-  const [error, setError] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] =
+    useState<string | null>(null);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   // ==========================================
   // Select & Parse CSV
@@ -44,16 +44,12 @@ export function useFileUpload() {
       setImportResult(null);
       setDownloadUrl(null);
 
-      // Validate CSV
-
       if (
         file.type !== "text/csv" &&
         !file.name.toLowerCase().endsWith(".csv")
       ) {
         throw new Error("Please upload a valid CSV file.");
       }
-
-      // Parse CSV
 
       const parsedRows = await parseCsv(file);
 
@@ -91,7 +87,6 @@ export function useFileUpload() {
     setImportResult(null);
     setDownloadUrl(null);
     setError(null);
-    
   };
 
   // ==========================================
@@ -109,8 +104,9 @@ export function useFileUpload() {
 
       const data: ImportResult = await uploadCsv(
         selectedFile.file
-         );
-         setDownloadUrl(data.downloadUrl ?? null);
+      );
+
+      setDownloadUrl(data.downloadUrl ?? null);
 
       setImportResult({
         success: data.success ?? true,
