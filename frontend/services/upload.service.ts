@@ -1,4 +1,6 @@
-const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:5000/api/import";
+const BASE_API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+  "https://groweasy-ai-importer-lctr.onrender.com";
 const UPLOAD_URL = BASE_API_URL.endsWith("/api/import")
   ? `${BASE_API_URL}/upload`
   : `${BASE_API_URL}/api/import/upload`;
