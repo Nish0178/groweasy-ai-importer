@@ -43,10 +43,9 @@ export async function uploadCsvController(
       skipEmptyLines: true,
     });
 
-    const fatalErrors = parsed.errors.filter(
-      (error) => error.code !== "UndetectableDelimiter"
-    );
-
+   const fatalErrors = parsed.errors.filter(
+  (error: Papa.ParseError) => error.code !== "UndetectableDelimiter"
+);
     if (
       fatalErrors.length > 0 &&
       (!parsed.data || parsed.data.length === 0)
