@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import multer from "multer";
+import { Request } from "express";
 
 // =======================================
 // Ensure uploads directory exists
@@ -49,9 +50,9 @@ const storage = multer.diskStorage({
 // =======================================
 
 const fileFilter: multer.Options["fileFilter"] = (
-  _req,
-  file,
-  cb
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
 ) => {
   const acceptedMimeTypes = new Set([
     "text/csv",
