@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { FileSpreadsheet, Cpu } from "lucide-react";
+import Image from "next/image";
+import { FileSpreadsheet } from "lucide-react";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function Navbar() {
@@ -29,8 +30,15 @@ export default function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-            <Cpu className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl shadow-md shadow-blue-500/20 ring-1 ring-blue-500/20">
+            <Image
+              src="/icon.png"
+              alt="GrowEasy Logo"
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+              priority
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">

@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   title: "GrowEasy AI Importer | Intelligent CRM CSV Field Mapping",
   description:
     "Turn messy spreadsheets, Facebook Leads, and CRM exports into clean GrowEasy CRM pipeline records with AI field mapping.",
+  icons: {
+    icon: [
+      { url: "/icon.png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 const themeInitScript = `
