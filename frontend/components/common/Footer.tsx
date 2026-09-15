@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Cpu, ShieldCheck, Zap, Heart } from "lucide-react";
+import { Cpu, ShieldCheck, Zap } from "lucide-react";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function Footer() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Table as TableIcon, Hash } from "lucide-react";
+import { Search, Table as TableIcon } from "lucide-react";
 import type { CsvRow } from "@/types/csv";
 
 interface Props {
@@ -11,11 +11,12 @@ interface Props {
 export default function PreviewTable({ rows }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  if (!rows.length) return null;
-
-  const headers = Object.keys(rows[0]);
+  const headers = useMemo(() => {
+    return rows.length > 0 ? Object.keys(rows[0]) : [];
+  }, [rows]);
 
   const filteredRows = useMemo(() => {
+    if (!rows.length) return [];
     if (!searchTerm.trim()) return rows;
     const term = searchTerm.toLowerCase();
     return rows.filter((row) =>
@@ -26,6 +27,8 @@ export default function PreviewTable({ rows }: Props) {
       )
     );
   }, [rows, headers, searchTerm]);
+
+  if (!rows.length) return null;
 
   return (
     <div className="mt-8 rounded-2xl border border-slate-200/90 bg-white/95 shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-900/90 transition-colors">

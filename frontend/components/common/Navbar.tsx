@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles, FileSpreadsheet, ArrowUpRight, Cpu } from "lucide-react";
+import { FileSpreadsheet, Cpu } from "lucide-react";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function Navbar() {

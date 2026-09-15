@@ -1,4 +1,4 @@
-import { Upload, BrainCircuit, DatabaseZap, ArrowRight } from "lucide-react";
+import { Upload, BrainCircuit, DatabaseZap } from "lucide-react";
 
 const steps = [
   {

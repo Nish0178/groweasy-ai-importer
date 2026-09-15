@@ -1,6 +1,7 @@
 const BASE_API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
   "https://groweasy-ai-importer-lctr.onrender.com";
+
 const UPLOAD_URL = BASE_API_URL.endsWith("/api/import")
   ? `${BASE_API_URL}/upload`
   : `${BASE_API_URL}/api/import/upload`;
@@ -15,7 +16,7 @@ export async function uploadCsv(file: File) {
       method: "POST",
       body: formData,
     });
-  } catch (error) {
+  } catch {
     throw new Error(
       `Unable to connect to the backend server (${UPLOAD_URL}). Please verify that the backend server is running.`
     );
@@ -24,7 +25,7 @@ export async function uploadCsv(file: File) {
   let data;
   try {
     data = await response.json();
-  } catch (jsonError) {
+  } catch {
     throw new Error(
       `Server returned status ${response.status} (${response.statusText}), but the response was not valid JSON.`
     );
