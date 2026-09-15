@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import { Request, Response } from "express";
 import Papa from "papaparse";
 
@@ -10,16 +9,6 @@ export async function uploadCsvController(
   res: Response
 ): Promise<void> {
   try {
-    // ======================================
-    // Validate Upload
-    // ======================================
-
-    console.log("Upload Request:", {
-      file: req.file?.originalname,
-      mimetype: req.file?.mimetype,
-      size: req.file?.size,
-    });
-
     if (!req.file) {
       res.status(400).json({
         success: false,
@@ -28,28 +17,28 @@ export async function uploadCsvController(
       return;
     }
 
-    // ======================================
-    // Read CSV
-    // ======================================
+    // Read CSV directly from memory buffer
+    const csvContent = req.file.buffer.toString("utf8");
 
-    const csvFile = fs.readFileSync(req.file.path, "utf8");
+    if (!csvContent.trim()) {
+      res.status(400).json({
+        success: false,
+        message: "The uploaded CSV file is empty.",
+      });
+      return;
+    }
 
-    // ======================================
     // Parse CSV
-    // ======================================
-
-    const parsed = Papa.parse(csvFile, {
+    const parsed = Papa.parse<Record<string, any>>(csvContent, {
       header: true,
       skipEmptyLines: true,
     });
 
-   const fatalErrors = parsed.errors.filter(
-  (error: Papa.ParseError) => error.code !== "UndetectableDelimiter"
-);
-    if (
-      fatalErrors.length > 0 &&
-      (!parsed.data || parsed.data.length === 0)
-    ) {
+    const fatalErrors = parsed.errors.filter(
+      (error: Papa.ParseError) => error.code !== "UndetectableDelimiter"
+    );
+
+    if (fatalErrors.length > 0 && (!parsed.data || parsed.data.length === 0)) {
       res.status(400).json({
         success: false,
         message: "Invalid CSV format.",
@@ -58,26 +47,23 @@ export async function uploadCsvController(
       return;
     }
 
-    const rows = parsed.data as Record<string, any>[];
+    const rows = parsed.data;
 
-    // ======================================
+    if (rows.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: "No data rows found in CSV file.",
+      });
+      return;
+    }
+
     // AI Processing
-    // ======================================
-
     const result = await processCsv(rows);
 
-    // ======================================
-    // Generate Excel
-    // ======================================
-
+    // Generate Excel File
     const excelFile = await generateExcel(result.records);
 
-    console.log("Excel Generated:", excelFile);
-
-    // ======================================
-    // Success Response
-    // ======================================
-
+    // Return Success Response
     res.status(200).json({
       success: true,
       totalImported: result.records.length,
@@ -86,26 +72,12 @@ export async function uploadCsvController(
       downloadUrl: `/exports/${excelFile}`,
     });
   } catch (error) {
-    console.error("Upload Controller Error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to process CSV.";
 
     res.status(500).json({
       success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Failed to process CSV.",
+      message,
     });
-  } finally {
-    // ======================================
-    // Delete Uploaded File
-    // ======================================
-
-    if (req.file && fs.existsSync(req.file.path)) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (error) {
-        console.error("Failed to delete uploaded file:", error);
-      }
-    }
   }
 }

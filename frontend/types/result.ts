@@ -1,7 +1,9 @@
+import type { CrmRecord } from "./crm";
+
 export interface ImportResult {
   success: boolean;
   totalImported: number;
   totalSkipped: number;
-  records: any[];
+  records: CrmRecord[];
   downloadUrl?: string;
 }

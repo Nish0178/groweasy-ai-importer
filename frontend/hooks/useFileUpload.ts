@@ -1,60 +1,49 @@
 "use client";
 
 import { useState } from "react";
-
 import { uploadCsv } from "@/services/upload.service";
-
 import type { UploadedFile } from "@/types/upload";
 import type { CsvRow } from "@/types/csv";
 import type { ImportResult } from "@/types/result";
-
 import { parseCsv } from "@/utils/parseCsv";
 
 export function useFileUpload() {
-  const [selectedFile, setSelectedFile] =
-    useState<UploadedFile | null>(null);
-
+  const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
   const [rows, setRows] = useState<CsvRow[]>([]);
-
   const [loading, setLoading] = useState(false);
-
   const [uploading, setUploading] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [uploaded, setUploaded] = useState(false);
-
-  // ✅ Fixed Type
-  const [importResult, setImportResult] =
-    useState<ImportResult | null>(null);
-
-  const [downloadUrl, setDownloadUrl] =
-    useState<string | null>(null);
-
-  const [error, setError] =
-    useState<string | null>(null);
+  // Derived states (prevents desynchronization bugs)
+  const uploaded = Boolean(importResult);
+  const downloadUrl = importResult?.downloadUrl ?? null;
 
   // ==========================================
   // Select & Parse CSV
   // ==========================================
-
   const selectFile = async (file: File) => {
     try {
       setLoading(true);
       setError(null);
-      setUploaded(false);
       setImportResult(null);
-      setDownloadUrl(null);
 
-      if (
-        file.type !== "text/csv" &&
-        !file.name.toLowerCase().endsWith(".csv")
-      ) {
-        throw new Error("Please upload a valid CSV file.");
+      const isCsv =
+        file.type === "text/csv" ||
+        file.name.toLowerCase().endsWith(".csv") ||
+        file.type === "application/vnd.ms-excel";
+
+      if (!isCsv) {
+        throw new Error("Please upload a valid CSV file (.csv).");
       }
 
       const parsedRows = await parseCsv(file);
 
-      setRows(parsedRows);
+      if (parsedRows.length === 0) {
+        throw new Error("The selected CSV file contains no data rows.");
+      }
 
+      setRows(parsedRows);
       setSelectedFile({
         file,
         name: file.name,
@@ -65,11 +54,8 @@ export function useFileUpload() {
       setRows([]);
       setSelectedFile(null);
       setImportResult(null);
-
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to parse CSV file."
+        err instanceof Error ? err.message : "Failed to parse CSV file."
       );
     } finally {
       setLoading(false);
@@ -79,20 +65,16 @@ export function useFileUpload() {
   // ==========================================
   // Clear Selected File
   // ==========================================
-
   const clearFile = () => {
     setSelectedFile(null);
     setRows([]);
-    setUploaded(false);
     setImportResult(null);
-    setDownloadUrl(null);
     setError(null);
   };
 
   // ==========================================
   // Confirm Import
   // ==========================================
-
   const confirmImport = async () => {
     if (!selectedFile || uploading || uploaded) {
       return;
@@ -102,11 +84,7 @@ export function useFileUpload() {
       setUploading(true);
       setError(null);
 
-      const data: ImportResult = await uploadCsv(
-        selectedFile.file
-      );
-
-      setDownloadUrl(data.downloadUrl ?? null);
+      const data: ImportResult = await uploadCsv(selectedFile.file);
 
       setImportResult({
         success: data.success ?? true,
@@ -115,16 +93,10 @@ export function useFileUpload() {
         records: data.records ?? [],
         downloadUrl: data.downloadUrl,
       });
-
-      setUploaded(true);
     } catch (err) {
       const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Failed to upload CSV.";
-
-      console.error("CSV Upload Error:", errorMessage);
-
+        err instanceof Error ? err.message : "Failed to upload CSV.";
+      console.error("CSV Import Error:", errorMessage);
       setError(errorMessage);
     } finally {
       setUploading(false);

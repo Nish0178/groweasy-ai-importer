@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from "express";
+import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import path from "node:path";
 
@@ -30,7 +30,7 @@ app.use(
       ) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(null, false);
       }
     },
     credentials: true,
@@ -80,6 +80,20 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: "Route Not Found",
+  });
+});
+
+// =====================================
+// Global Error Handler
+// =====================================
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const message =
+    err instanceof Error ? err.message : "Internal server error occurred.";
+
+  res.status(400).json({
+    success: false,
+    message,
   });
 });
 

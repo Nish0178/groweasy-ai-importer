@@ -1,15 +1,8 @@
-import { randomInt } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import multer from "multer";
 import { Request } from "express";
 
-// =======================================
-// Ensure uploads directory exists
-// =======================================
+const defaultMaxUploadSizeBytes = 10 * 1024 * 1024; // 10 MB
 
-const uploadDir = "uploads";
-const defaultMaxUploadSizeBytes = 10 * 1024 * 1024;
 const maxUploadSizeBytes = (() => {
   const configuredSize = Number.parseInt(
     process.env.MAX_UPLOAD_SIZE ?? `${defaultMaxUploadSizeBytes}`,
@@ -23,58 +16,30 @@ const maxUploadSizeBytes = (() => {
   return defaultMaxUploadSizeBytes;
 })();
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const storage = multer.memoryStorage();
 
-// =======================================
-// Storage
-// =======================================
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
-  },
-
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${randomInt(1e9)}${path.extname(
-      file.originalname
-    )}`;
-
-    cb(null, uniqueName);
-  },
-});
-
-// =======================================
-// File Filter
-// =======================================
+const acceptedMimeTypes = new Set([
+  "text/csv",
+  "application/vnd.ms-excel",
+  "application/csv",
+  "text/plain",
+  "text/comma-separated-values",
+]);
 
 const fileFilter: multer.Options["fileFilter"] = (
   _req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  const acceptedMimeTypes = new Set([
-    "text/csv",
-    "application/vnd.ms-excel",
-    "application/csv",
-    "text/plain",
-    "text/comma-separated-values",
-  ]);
+  const isAcceptedMime = acceptedMimeTypes.has(file.mimetype);
+  const isCsvExtension = file.originalname.toLowerCase().endsWith(".csv");
 
-  if (
-    acceptedMimeTypes.has(file.mimetype) ||
-    file.originalname.toLowerCase().endsWith(".csv")
-  ) {
+  if (isAcceptedMime || isCsvExtension) {
     cb(null, true);
   } else {
     cb(new Error("Only CSV files are allowed."));
   }
 };
-
-// =======================================
-// Multer Instance
-// =======================================
 
 const upload = multer({
   storage,
