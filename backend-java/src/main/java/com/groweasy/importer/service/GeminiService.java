@@ -29,11 +29,18 @@ public class GeminiService {
     private final HttpClient httpClient;
 
     public GeminiService(
-            @Value("${gemini.api.key}") String apiKey,
+            @Value("${gemini.api.key:}") String apiKey,
             @Value("${gemini.api.model:gemini-2.5-flash}") String model,
             ObjectMapper objectMapper) {
-        this.apiKey = apiKey;
-        this.model = model;
+        String resolvedKey = (apiKey != null && !apiKey.isBlank()) ? apiKey.trim() : "";
+        if (resolvedKey.isEmpty()) {
+            String envKey = System.getenv("GEMINI_API_KEY");
+            if (envKey != null && !envKey.isBlank()) {
+                resolvedKey = envKey.trim();
+            }
+        }
+        this.apiKey = resolvedKey;
+        this.model = model != null && !model.isBlank() ? model : "gemini-2.5-flash";
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -69,8 +76,11 @@ public class GeminiService {
                     totalSkipped += batch.size();
                 }
             } catch (Exception e) {
-                log.error("Batch {} failed to process via Gemini: {}", batchNumber, e.getMessage(), e);
+                log.error("Batch {} failed to process via Gemini: {}", batchNumber, e.getMessage());
                 totalSkipped += batch.size();
+                if (e instanceof IllegalStateException || (e.getMessage() != null && (e.getMessage().contains("403") || e.getMessage().contains("401")))) {
+                    throw new RuntimeException("Gemini API extraction failed: " + e.getMessage(), e);
+                }
             }
         }
 
@@ -81,6 +91,10 @@ public class GeminiService {
      * Sends a single batch to Gemini API and parses the JSON extraction result.
      */
     public AiExtractionResponse extractCrmBatch(List<Map<String, Object>> batch) throws Exception {
+        if (this.apiKey == null || this.apiKey.isBlank()) {
+            throw new IllegalStateException("GEMINI_API_KEY environment variable is not configured. Please set GEMINI_API_KEY before running the server.");
+        }
+
         String batchJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(batch);
         String prompt = CrmExtractionPrompt.PROMPT + "\n\nCSV Records:\n\n" + batchJson + "\n";
 
@@ -92,12 +106,13 @@ public class GeminiService {
         String requestJson = objectMapper.writeValueAsString(requestBodyMap);
 
         String endpoint = String.format(
-                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                model, apiKey);
+                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
+                model);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(endpoint))
                 .header("Content-Type", "application/json")
+                .header("x-goog-api-key", this.apiKey)
                 .timeout(Duration.ofSeconds(60))
                 .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                 .build();
@@ -105,7 +120,7 @@ public class GeminiService {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            log.error("Gemini API error response HTTP {}: {}", response.statusCode(), response.body());
+            log.error("Gemini API error response HTTP {}", response.statusCode());
             throw new RuntimeException("Gemini API call returned status: " + response.statusCode());
         }
 

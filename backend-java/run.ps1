@@ -13,6 +13,33 @@ $javaVersion = java -version 2>&1 | Out-String
 Write-Host "Java Detected:" -ForegroundColor Gray
 Write-Host $javaVersion -ForegroundColor DarkGray
 
+# Check Maven in PATH or known location
+if (-not (Get-Command mvn -ErrorAction SilentlyContinue)) {
+    $knownMvn = "C:\Users\dell\Downloads\apache-maven-3.9.16-bin\bin"
+    if (Test-Path $knownMvn) {
+        $env:PATH = "$knownMvn;$env:PATH"
+        Write-Host "Added Maven from $knownMvn to PATH." -ForegroundColor Gray
+    }
+}
+
+# Ensure GEMINI_API_KEY is in environment if available in ../backend/.env
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+    $envFile = Join-Path $PSScriptRoot "..\backend\.env"
+    if (Test-Path $envFile) {
+        $keyLine = Get-Content $envFile | Where-Object { $_ -match "^GEMINI_API_KEY=" } | Select-Object -First 1
+        if ($keyLine) {
+            $env:GEMINI_API_KEY = ($keyLine -replace "^GEMINI_API_KEY=", "").Trim()
+            Write-Host "Loaded GEMINI_API_KEY from backend environment." -ForegroundColor Gray
+        }
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+    Write-Host "Warning: GEMINI_API_KEY is not set in environment." -ForegroundColor Yellow
+} else {
+    Write-Host "GEMINI_API_KEY is configured in runtime environment." -ForegroundColor Green
+}
+
 if (Get-Command mvn -ErrorAction SilentlyContinue) {
     Write-Host "Running with Maven..." -ForegroundColor Green
     mvn clean spring-boot:run

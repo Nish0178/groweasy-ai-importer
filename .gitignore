@@ -7,6 +7,9 @@
 # Build
 **/dist
 **/build
+**/target
+*.class
+*.jar
 
 # Environment
 **/.env
