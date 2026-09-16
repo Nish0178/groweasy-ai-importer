@@ -189,15 +189,18 @@ public class DataQualityService {
             if (!normPhone.isEmpty() && item.getPhoneValid().equals("VALID")) {
                 String phoneDigits = normPhone.replaceAll("[^0-9]", "");
                 if (phoneDigits.length() >= 7) {
-                    if (seenPhones.containsKey(phoneDigits)) {
+                    String phoneKey = phoneDigits.length() >= 10
+                            ? phoneDigits.substring(phoneDigits.length() - 10)
+                            : phoneDigits;
+                    if (seenPhones.containsKey(phoneKey)) {
                         isDuplicate = true;
-                        String phoneDupOf = "Row " + seenPhones.get(phoneDigits);
+                        String phoneDupOf = "Row " + seenPhones.get(phoneKey);
                         if (duplicateOf.isEmpty()) {
                             duplicateOf = phoneDupOf;
                         }
                         issues.add("Duplicate phone (seen on " + phoneDupOf + ")");
                     } else {
-                        seenPhones.put(phoneDigits, originalRow);
+                        seenPhones.put(phoneKey, originalRow);
                     }
                 }
             }

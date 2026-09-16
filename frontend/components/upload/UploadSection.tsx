@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   FileSpreadsheet,
   ShieldCheck,
@@ -11,6 +12,9 @@ import {
   AlertCircle,
   ArrowRight,
   TrendingUp,
+  Copy,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import Dropzone from "./Dropzone";
@@ -53,6 +57,8 @@ export default function UploadSection() {
     confirmImport,
   } = useFileUpload();
 
+  const [showErrors, setShowErrors] = useState(false);
+
   const defaultApiHost =
     process.env.NODE_ENV === "production"
       ? "https://groweasy-ai-importer-lctr.onrender.com"
@@ -60,6 +66,25 @@ export default function UploadSection() {
   const downloadReportUrl = importResult?.downloadUrl
     ? `${(process.env.NEXT_PUBLIC_API_URL || defaultApiHost).replace(/\/+$/, "")}${importResult.downloadUrl}`
     : "#";
+
+  const totalCount = importResult
+    ? (importResult.totalRecords ?? (importResult.totalImported + importResult.totalSkipped))
+    : 0;
+  const processedCount = importResult
+    ? (importResult.processedRecords ?? importResult.totalImported)
+    : 0;
+  const skippedCount = importResult
+    ? (importResult.skippedRecords ?? importResult.totalSkipped)
+    : 0;
+  const successRate = importResult
+    ? (importResult.processingPercentage ?? (totalCount > 0 ? Math.round((processedCount * 1000.0) / totalCount) / 10 : 100.0))
+    : 100.0;
+  const qualityScore = importResult
+    ? (importResult.averageQualityScore ?? (importResult.dataQualitySummary?.averageScore ?? 90))
+    : 90;
+  const duplicateCount = importResult
+    ? (importResult.duplicateCount ?? (importResult.dataQualitySummary?.duplicates ?? 0))
+    : 0;
 
   return (
     <section id="upload-section" className="mt-14 scroll-mt-24">
@@ -216,17 +241,21 @@ export default function UploadSection() {
         {uploaded && (
           <div className="mt-8 rounded-2xl border border-emerald-200/90 bg-emerald-50/80 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/40">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
-                  <CheckCircle2 className="h-5 w-5" />
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shrink-0">
+                  <CheckCircle2 className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-emerald-900 dark:text-emerald-200">
-                    Import Completed Successfully!
+                  <h4 className="font-bold text-emerald-900 dark:text-emerald-200 text-base sm:text-lg">
+                    Import Complete
                   </h4>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                    Normalized {importResult?.totalImported ?? 0} leads into GrowEasy CRM format.
-                    {importResult?.totalSkipped ? ` (${importResult.totalSkipped} invalid/empty rows skipped)` : ""}
+                  <p className="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 mt-0.5">
+                    <span className="font-bold">{totalCount} records processed</span> &bull;{" "}
+                    <span className="font-semibold text-emerald-800 dark:text-emerald-200">{processedCount} successful</span>
+                    {skippedCount > 0 ? (
+                      <> &bull; <span className="font-semibold text-amber-800 dark:text-amber-300">{skippedCount} skipped</span></>
+                    ) : null}
+                    {" "}&bull; <span className="font-bold">{successRate}% processing success</span>
                   </p>
                 </div>
               </div>
@@ -236,10 +265,10 @@ export default function UploadSection() {
                   href={downloadReportUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md transition hover:bg-emerald-700 active:scale-98"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md transition hover:bg-emerald-700 active:scale-98 shrink-0"
                 >
                   <Download className="h-4 w-4" />
-                  <span>Download Clean Excel Report</span>
+                  <span>Download Professional CRM Report</span>
                 </a>
               )}
             </div>
@@ -249,77 +278,154 @@ export default function UploadSection() {
         {/* Results Metrics & CRM Records Table */}
         {importResult && (
           <div className="mt-8 space-y-6">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+            {/* 5 Summary KPI Cards */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4">
+              {/* Card 1: Total Leads */}
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/40">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    Imported Records
-                  </p>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Total Leads</p>
+                  <FileSpreadsheet className="h-4 w-4 text-slate-500" />
+                </div>
+                <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                  {totalCount}
+                </h3>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Total input rows</p>
+              </div>
+
+              {/* Card 2: Processed */}
+              <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Processed</p>
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 </div>
-                <h3 className="mt-2 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                  {importResult.totalImported}
+                <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                  {processedCount}
                 </h3>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                  CRM-ready standardized leads
-                </p>
+                <p className="mt-1 text-[11px] text-emerald-600/80 dark:text-emerald-400/80">CRM-ready leads</p>
               </div>
 
-              <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
+              {/* Card 3: Skipped */}
+              <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                    Skipped / Filtered
-                  </p>
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Skipped</p>
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                 </div>
-                <h3 className="mt-2 text-3xl font-extrabold text-amber-600 dark:text-amber-400">
-                  {importResult.totalSkipped}
+                <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold text-amber-600 dark:text-amber-400">
+                  {skippedCount}
                 </h3>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                  Missing required email & phone
-                </p>
+                <p className="mt-1 text-[11px] text-amber-600/80 dark:text-amber-400/80">Missing contact info</p>
               </div>
 
-              <div className="rounded-2xl border border-blue-200/80 bg-blue-50/50 p-5 dark:border-blue-900/50 dark:bg-blue-950/20">
+              {/* Card 4: Data Quality */}
+              <div className="rounded-2xl border border-blue-200/80 bg-blue-50/50 p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-blue-700 dark:text-blue-400">
-                    AI Mapping Rate
-                  </p>
-                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <p className="text-xs font-medium text-blue-700 dark:text-blue-400">Data Quality</p>
+                  <ShieldCheck className="h-4 w-4 text-blue-600" />
                 </div>
-                <h3 className="mt-2 text-3xl font-extrabold text-blue-600 dark:text-blue-400">
-                  100%
+                <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold text-blue-600 dark:text-blue-400">
+                  {qualityScore} <span className="text-xs font-normal text-slate-500">/ 100</span>
                 </h3>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                  Automated field schema resolution
-                </p>
+                <p className="mt-1 text-[11px] text-blue-600/80 dark:text-blue-400/80">Deterministic score</p>
+              </div>
+
+              {/* Card 5: Duplicates */}
+              <div className="rounded-2xl border border-purple-200/80 bg-purple-50/50 p-4 dark:border-purple-900/50 dark:bg-purple-950/20 col-span-2 sm:col-span-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-purple-700 dark:text-purple-400">Duplicates</p>
+                  <Copy className="h-4 w-4 text-purple-600" />
+                </div>
+                <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold text-purple-600 dark:text-purple-400">
+                  {duplicateCount}
+                </h3>
+                <p className="mt-1 text-[11px] text-purple-600/80 dark:text-purple-400/80">Detected & flagged</p>
               </div>
             </div>
+
+            {/* Expandable Import Diagnostics & Errors (Only if there are errors) */}
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/30 dark:border-amber-900/50 dark:bg-amber-950/10">
+                <button
+                  type="button"
+                  onClick={() => setShowErrors(!showErrors)}
+                  className="w-full flex items-center justify-between px-5 py-3.5 text-left transition hover:bg-amber-100/40 dark:hover:bg-amber-900/20"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                      Import Diagnostics & Skipped Rows ({importResult.errors.length})
+                    </span>
+                  </div>
+                  {showErrors ? (
+                    <ChevronUp className="h-4 w-4 text-amber-700" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-amber-700" />
+                  )}
+                </button>
+
+                {showErrors && (
+                  <div className="border-t border-amber-200/60 dark:border-amber-900/40 p-4 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-amber-200/60 dark:divide-amber-900/40 text-left text-xs">
+                      <thead>
+                        <tr className="text-amber-900 dark:text-amber-300 font-semibold">
+                          <th className="p-2">Row</th>
+                          <th className="p-2">Identifier</th>
+                          <th className="p-2">Error Type</th>
+                          <th className="p-2">Message</th>
+                          <th className="p-2">Recommended Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-amber-200/40 dark:divide-amber-900/30">
+                        {importResult.errors.map((err, idx) => (
+                          <tr key={idx} className="text-slate-700 dark:text-slate-300">
+                            <td className="p-2 font-mono">{err.original_row}</td>
+                            <td className="p-2 font-medium">{err.record_identifier}</td>
+                            <td className="p-2">
+                              <span className="rounded bg-amber-100 dark:bg-amber-950 px-1.5 py-0.5 text-amber-800 dark:text-amber-300 text-[10px] font-semibold">
+                                {err.error_type}
+                              </span>
+                            </td>
+                            <td className="p-2">{err.error_message}</td>
+                            <td className="p-2 text-slate-500 dark:text-slate-400">{err.recommended_action}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* CRM Result Table */}
             {importResult.records && importResult.records.length > 0 && (
               <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white dark:border-slate-800 dark:bg-slate-900">
-                <div className="border-b border-slate-200/80 bg-slate-50/80 px-5 py-3 dark:border-slate-800 dark:bg-slate-850/80">
+                <div className="border-b border-slate-200/80 bg-slate-50/80 px-5 py-3 dark:border-slate-800 dark:bg-slate-850/80 flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                    Normalized GrowEasy CRM Records
+                    Normalized GrowEasy CRM Records ({importResult.records.length})
                   </h4>
+                  <span className="text-[11px] text-slate-500">
+                    All records included in exported workbook
+                  </span>
                 </div>
 
                 <div className="max-h-96 overflow-auto scrollbar-thin">
                   <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-left">
                     <thead className="sticky top-0 bg-slate-100/95 dark:bg-slate-800/95">
                       <tr>
+                        <th className="p-3.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">ID</th>
                         <th className="p-3.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                         <th className="p-3.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Email</th>
                         <th className="p-3.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Mobile</th>
                         <th className="p-3.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Company</th>
                         <th className="p-3.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">CRM Stage</th>
+                        <th className="p-3.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Quality</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
                       {importResult.records.map((record: CrmRecord, index: number) => (
                         <tr key={index} className="transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                          <td className="p-3.5 text-xs font-mono text-slate-500">
+                            {record.lead_id || `LEAD-${String(index + 1).padStart(4, "0")}`}
+                          </td>
                           <td className="p-3.5 text-xs font-medium text-slate-900 dark:text-white">
                             {record.name || "(Unknown Name)"}
                           </td>
@@ -341,6 +447,19 @@ export default function UploadSection() {
                               )}`}
                             >
                               {record.crm_status || "PENDING"}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-xs">
+                            <span
+                              className={`font-semibold ${
+                                (record.quality_score ?? 100) >= 80
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : (record.quality_score ?? 100) >= 50
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-rose-600 dark:text-rose-400"
+                              }`}
+                            >
+                              {record.quality_score ?? 100}%
                             </span>
                           </td>
                         </tr>

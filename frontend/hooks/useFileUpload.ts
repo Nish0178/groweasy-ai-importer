@@ -86,12 +86,28 @@ export function useFileUpload() {
 
       const data: ImportResult = await uploadCsv(selectedFile.file);
 
+      const totalImp = data.processedRecords ?? data.totalImported ?? 0;
+      const totalSkip = data.skippedRecords ?? data.totalSkipped ?? 0;
+      const totalRecs = data.totalRecords ?? (totalImp + totalSkip);
+      const procPct = data.processingPercentage ?? (totalRecs > 0 ? Math.round((totalImp * 1000.0) / totalRecs) / 10 : 100.0);
+
       setImportResult({
         success: data.success ?? true,
-        totalImported: data.totalImported ?? 0,
-        totalSkipped: data.totalSkipped ?? 0,
+        totalImported: totalImp,
+        totalSkipped: totalSkip,
+        totalRecords: totalRecs,
+        processedRecords: totalImp,
+        skippedRecords: totalSkip,
+        processingPercentage: procPct,
         records: data.records ?? [],
         downloadUrl: data.downloadUrl,
+        duplicateCount: data.duplicateCount ?? 0,
+        invalidEmailCount: data.invalidEmailCount ?? 0,
+        missingFieldCount: data.missingFieldCount ?? 0,
+        averageQualityScore: data.averageQualityScore ?? 0,
+        leadStatusDistribution: data.leadStatusDistribution ?? {},
+        dataQualitySummary: data.dataQualitySummary,
+        errors: data.errors ?? [],
       });
     } catch (err) {
       const errorMessage =

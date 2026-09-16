@@ -329,8 +329,8 @@ public class ExcelService {
         sheet.setDisplayGridlines(true);
 
         String[] headers = {
-                "Lead ID", "Name", "Company", "CRM Classification", "Priority",
-                "Classification Reason", "AI Insight", "Recommended Follow Up"
+                "Lead ID", "Name", "Company", "CRM Classification",
+                "Classification Reason", "AI Insight", "Recommended Follow Up", "Confidence"
         };
 
         Row headerRow = sheet.createRow(0);
@@ -347,10 +347,10 @@ public class ExcelService {
             createCell(row, 1, r.getName(), altStyle);
             createCell(row, 2, r.getCompany(), altStyle);
             createCell(row, 3, r.getCrmStatus(), getStatusCellStyle(r.getCrmStatus(), styles));
-            createCell(row, 4, r.getPriority(), getPriorityCellStyle(r.getPriority(), styles));
-            createCell(row, 5, r.getAiReason(), altStyle);
-            createCell(row, 6, r.getAiInsight(), altStyle);
-            createCell(row, 7, r.getRecommendedAction(), altStyle);
+            createCell(row, 4, r.getAiReason(), altStyle);
+            createCell(row, 5, r.getAiInsight(), altStyle);
+            createCell(row, 6, r.getRecommendedAction(), altStyle);
+            createCell(row, 7, r.getConfidence(), altStyle);
         }
 
         sheet.createFreezePane(0, 1);

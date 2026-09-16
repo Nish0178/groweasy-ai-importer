@@ -81,6 +81,9 @@ public class CrmRecord {
     @JsonProperty("description")
     private String description = "";
 
+    @JsonProperty("confidence")
+    private String confidence = "";
+
     @JsonProperty("quality_score")
     private int qualityScore = 100;
 
@@ -288,6 +291,14 @@ public class CrmRecord {
 
     public void setDescription(String description) {
         this.description = description != null ? description : "";
+    }
+
+    public String getConfidence() {
+        return confidence;
+    }
+
+    public void setConfidence(String confidence) {
+        this.confidence = confidence != null ? confidence : "";
     }
 
     public int getQualityScore() {

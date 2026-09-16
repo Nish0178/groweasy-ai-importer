@@ -37,6 +37,7 @@ Rules:
 - data_source (MUST be one of: leads_on_demand, meridian_tower, eden_park, varah_swamy, sarjapur_plots, or leave empty)
 - possession_time
 - description
+- confidence (e.g., HIGH, MEDIUM, LOW based on quality and completeness of contextual evidence, else empty)
 
 2. Multiple Contacts Handling:
 - If multiple emails exist: use the first valid email; append remaining emails to crm_note.
@@ -72,7 +73,8 @@ Output ONLY a valid JSON object matching this exact structure:
       "crm_note": "...",
       "data_source": "...",
       "possession_time": "...",
-      "description": ""
+      "description": "",
+      "confidence": "HIGH"
     }
   ],
   "skipped": 0
