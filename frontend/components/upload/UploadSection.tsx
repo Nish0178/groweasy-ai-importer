@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   FileSpreadsheet,
+  FileText,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -86,6 +87,8 @@ export default function UploadSection() {
     ? (importResult.duplicateCount ?? (importResult.dataQualitySummary?.duplicates ?? 0))
     : 0;
 
+  const isDocx = selectedFile?.name?.toLowerCase().endsWith(".docx") || false;
+
   return (
     <section id="upload-section" className="mt-14 scroll-mt-24">
       <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200/90 bg-white/95 p-6 sm:p-10 shadow-xl backdrop-blur-xl transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/90">
@@ -94,10 +97,10 @@ export default function UploadSection() {
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-6 dark:border-slate-800">
           <div>
             <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              CSV Import Studio
+              CSV & DOCX Import Studio
             </h3>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              Drop any CSV file to automatically map fields into GrowEasy CRM format.
+              Drop any CSV or Word (.docx) document to automatically map fields and extract leads into GrowEasy CRM format.
             </p>
           </div>
 
@@ -164,7 +167,7 @@ export default function UploadSection() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-                  <FileSpreadsheet className="h-6 w-6" />
+                  {isDocx ? <FileText className="h-6 w-6" /> : <FileSpreadsheet className="h-6 w-6" />}
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-900 dark:text-white break-all">
@@ -173,7 +176,11 @@ export default function UploadSection() {
                   <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <span>{formatFileSize(selectedFile.size)}</span>
                     <span>•</span>
-                    <span className="font-mono">{rows.length} rows detected</span>
+                    {isDocx ? (
+                      <span className="font-medium text-blue-600 dark:text-blue-400">Word Document (.docx) • Ready for AI extraction</span>
+                    ) : (
+                      <span className="font-mono">{rows.length} rows detected</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -194,47 +201,66 @@ export default function UploadSection() {
           </div>
         )}
 
-        {/* Preview & Action Bar */}
-        {rows.length > 0 && (
-          <>
-            <PreviewTable rows={rows} />
+        {/* CSV Preview Table */}
+        {rows.length > 0 && <PreviewTable rows={rows} />}
 
-            <div className="mt-8 flex flex-col items-end gap-4 border-t border-slate-200/80 pt-6 dark:border-slate-800">
-              <div className="flex flex-wrap items-center justify-between w-full gap-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Ready to map <span className="font-semibold text-slate-900 dark:text-white">{rows.length}</span> records into GrowEasy CRM schema.
-                </div>
-
-                <button
-                  type="button"
-                  onClick={confirmImport}
-                  disabled={uploading || uploaded}
-                  className={`inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-semibold text-white shadow-md transition-all active:scale-98 disabled:cursor-not-allowed ${
-                    uploaded
-                      ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
-                      : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/25 disabled:opacity-60"
-                  }`}
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>AI Processing & Field Mapping...</span>
-                    </>
-                  ) : uploaded ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Imported Successfully ✓</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      <span>Confirm & AI Map to CRM</span>
-                    </>
-                  )}
-                </button>
+        {/* DOCX Extraction Readiness Card */}
+        {isDocx && !uploaded && (
+          <div className="mt-6 rounded-2xl border border-blue-200/80 bg-white/90 p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-850/60">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <h5 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Word Document Ready for AI Lead Extraction
+                </h5>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  GrowEasy AI will scan all paragraphs, key-value blocks, customer notes, and tables in this document to extract contact profiles, assign CRM classifications, and generate an intelligence report.
+                </p>
               </div>
             </div>
-          </>
+          </div>
+        )}
+
+        {/* Action Bar (renders for both CSV and DOCX) */}
+        {selectedFile && !uploaded && (
+          <div className="mt-8 flex flex-col items-end gap-4 border-t border-slate-200/80 pt-6 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between w-full gap-4">
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {isDocx ? (
+                  <span>Ready to extract CRM lead records from Word document.</span>
+                ) : (
+                  <span>
+                    Ready to map <span className="font-semibold text-slate-900 dark:text-white">{rows.length}</span> records into GrowEasy CRM schema.
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={confirmImport}
+                disabled={uploading || uploaded}
+                className={`inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-semibold text-white shadow-md transition-all active:scale-98 disabled:cursor-not-allowed ${
+                  uploaded
+                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/25 disabled:opacity-60"
+                }`}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>AI Processing & Lead Extraction...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Confirm & AI Map to CRM</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Upload Success Banner */}

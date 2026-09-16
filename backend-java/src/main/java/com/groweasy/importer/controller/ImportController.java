@@ -27,7 +27,7 @@ public class ImportController {
 
         if (file == null || file.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ImportResponse.error("CSV file is required."));
+                    .body(ImportResponse.error("File is required. Supported file types are CSV and DOCX."));
         }
 
         try {
@@ -41,7 +41,7 @@ public class ImportController {
         } catch (Exception e) {
             log.error("Internal error processing upload: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ImportResponse.error(e.getMessage() != null ? e.getMessage() : "Failed to process CSV."));
+                    .body(ImportResponse.error(e.getMessage() != null ? e.getMessage() : "Failed to process file."));
         }
     }
 }

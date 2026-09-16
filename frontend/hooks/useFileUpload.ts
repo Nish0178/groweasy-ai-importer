@@ -28,34 +28,45 @@ export function useFileUpload() {
       setError(null);
       setImportResult(null);
 
+      const fileName = file.name.toLowerCase();
       const isCsv =
         file.type === "text/csv" ||
-        file.name.toLowerCase().endsWith(".csv") ||
-        file.type === "application/vnd.ms-excel";
+        fileName.endsWith(".csv") ||
+        file.type === "application/vnd.ms-excel" ||
+        file.type === "text/plain";
 
-      if (!isCsv) {
-        throw new Error("Please upload a valid CSV file (.csv).");
+      const isDocx =
+        fileName.endsWith(".docx") ||
+        file.type.includes("wordprocessingml") ||
+        file.type.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+
+      if (!isCsv && !isDocx) {
+        throw new Error("Supported file types are CSV and DOCX.");
       }
 
-      const parsedRows = await parseCsv(file);
-
-      if (parsedRows.length === 0) {
-        throw new Error("The selected CSV file contains no data rows.");
+      if (isCsv) {
+        const parsedRows = await parseCsv(file);
+        if (parsedRows.length === 0) {
+          throw new Error("The selected CSV file contains no data rows.");
+        }
+        setRows(parsedRows);
+      } else {
+        // Word DOCX document: unstructured text/table extraction handled securely on backend
+        setRows([]);
       }
 
-      setRows(parsedRows);
       setSelectedFile({
         file,
         name: file.name,
         size: file.size,
-        type: file.type,
+        type: file.type || (isDocx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "text/csv"),
       });
     } catch (err) {
       setRows([]);
       setSelectedFile(null);
       setImportResult(null);
       setError(
-        err instanceof Error ? err.message : "Failed to parse CSV file."
+        err instanceof Error ? err.message : "Failed to parse file."
       );
     } finally {
       setLoading(false);
@@ -111,8 +122,8 @@ export function useFileUpload() {
       });
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to upload CSV.";
-      console.error("CSV Import Error:", errorMessage);
+        err instanceof Error ? err.message : "Failed to upload file.";
+      console.error("Import Error:", errorMessage);
       setError(errorMessage);
     } finally {
       setUploading(false);

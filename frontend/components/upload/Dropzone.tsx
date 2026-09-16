@@ -23,6 +23,7 @@ export default function Dropzone({ onFileSelect }: DropzoneProps) {
       "text/csv": [".csv"],
       "application/vnd.ms-excel": [".csv"],
       "text/plain": [".csv"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
     },
     multiple: false,
     onDrop,
@@ -72,7 +73,7 @@ export default function Dropzone({ onFileSelect }: DropzoneProps) {
         </div>
 
         <h2 className="mt-5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {isDragActive ? "Release to drop your CSV" : "Drag & drop your CSV file here"}
+          {isDragActive ? "Release to drop your CSV or DOCX" : "Drag & drop your CSV or Word (.docx) file here"}
         </h2>
 
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -81,7 +82,7 @@ export default function Dropzone({ onFileSelect }: DropzoneProps) {
 
         <div className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white/80 px-3 py-1 text-xs font-medium text-slate-500 shadow-2xs border border-slate-200/80 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
           <FileSpreadsheet className="h-3.5 w-3.5 text-blue-500" />
-          Supports .CSV up to 10MB (UTF-8, comma/semicolon/tab separated)
+          Supports .CSV and .DOCX files up to 10MB
         </div>
       </div>
 

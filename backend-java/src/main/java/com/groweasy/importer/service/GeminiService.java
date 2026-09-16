@@ -225,7 +225,7 @@ public class GeminiService {
                 .uri(URI.create(endpoint))
                 .header("Content-Type", "application/json")
                 .header("x-goog-api-key", this.apiKey)
-                .timeout(Duration.ofSeconds(60))
+                .timeout(Duration.ofSeconds(120))
                 .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                 .build();
 
@@ -236,9 +236,93 @@ public class GeminiService {
             throw new RuntimeException("Gemini API call returned status: " + response.statusCode());
         }
 
-        String responseBody = response.body();
-        log.debug("Gemini response received.");
+        return parseGeminiResponse(response.body());
+    }
 
+    /**
+     * Extracts CRM leads from raw unstructured/tabular text extracted from a business document (e.g. DOCX).
+     */
+    public GeminiExtractionResult processDocumentTextWithDiagnostics(String documentText) {
+        if (documentText == null || documentText.isBlank()) {
+            return new GeminiExtractionResult(Collections.emptyList(), Collections.emptyList());
+        }
+
+        List<CrmRecord> finalRecords = new ArrayList<>();
+        List<ImportErrorItem> errors = new ArrayList<>();
+
+        try {
+            AiExtractionResponse result = extractCrmFromDocumentText(documentText);
+            if (result != null && result.getRecords() != null) {
+                List<CrmRecord> extracted = result.getRecords();
+                for (int j = 0; j < extracted.size(); j++) {
+                    CrmRecord rec = extracted.get(j);
+                    if (rec.getOriginalRow() <= 0) {
+                        rec.setOriginalRow(j + 1);
+                    }
+                    if (rec.getLeadId() == null || rec.getLeadId().isBlank()) {
+                        rec.setLeadId(String.format("LEAD-%04d", rec.getOriginalRow()));
+                    }
+                    if ((rec.getPhone() == null || rec.getPhone().isBlank()) &&
+                            rec.getMobileWithoutCountryCode() != null && !rec.getMobileWithoutCountryCode().isBlank()) {
+                        String code = (rec.getCountryCode() != null && !rec.getCountryCode().isBlank()) ? rec.getCountryCode() + " " : "";
+                        rec.setPhone(code + rec.getMobileWithoutCountryCode());
+                    }
+                    finalRecords.add(rec);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed in Gemini document text extraction: {}", e.getMessage());
+            errors.add(new ImportErrorItem(
+                    1,
+                    "Document Content",
+                    "AI Processing Failure",
+                    e.getMessage() != null ? e.getMessage() : "Gemini document extraction failed",
+                    "Verify document format or retry extraction."
+            ));
+        }
+
+        return new GeminiExtractionResult(finalRecords, errors);
+    }
+
+    /**
+     * Sends document text to Gemini API using DOCUMENT_EXTRACTION_PROMPT.
+     */
+    public AiExtractionResponse extractCrmFromDocumentText(String documentText) throws Exception {
+        if (this.apiKey == null || this.apiKey.isBlank()) {
+            throw new IllegalStateException("GEMINI_API_KEY environment variable is not configured. Please set GEMINI_API_KEY before running the server.");
+        }
+
+        String prompt = CrmExtractionPrompt.DOCUMENT_EXTRACTION_PROMPT + "\n\nDocument Content:\n\n" + documentText + "\n";
+
+        Map<String, Object> textPart = Map.of("text", prompt);
+        Map<String, Object> contentPart = Map.of("parts", List.of(textPart));
+        Map<String, Object> requestBodyMap = Map.of("contents", List.of(contentPart));
+
+        String requestJson = objectMapper.writeValueAsString(requestBodyMap);
+
+        String endpoint = String.format(
+                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
+                model);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(endpoint))
+                .header("Content-Type", "application/json")
+                .header("x-goog-api-key", this.apiKey)
+                .timeout(Duration.ofSeconds(120))
+                .POST(HttpRequest.BodyPublishers.ofString(requestJson))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            log.error("Gemini API error HTTP {}: {}", response.statusCode(), response.body());
+            throw new RuntimeException("Gemini API call returned status: " + response.statusCode());
+        }
+
+        return parseGeminiResponse(response.body());
+    }
+
+    private AiExtractionResponse parseGeminiResponse(String responseBody) throws Exception {
         JsonNode rootNode = objectMapper.readTree(responseBody);
         JsonNode candidatesNode = rootNode.path("candidates");
 

@@ -135,7 +135,7 @@ public class ExcelService {
 
         Row metaRow = sheet.createRow(rowNum++);
         Cell metaCell = metaRow.createCell(1);
-        metaCell.setCellValue("Generated on " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm:ss")) + " | Model: gemini-2.5-flash");
+        metaCell.setCellValue("Generated on " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm:ss")));
         metaCell.setCellStyle(styles.metaStyle);
 
         rowNum++; // Blank line

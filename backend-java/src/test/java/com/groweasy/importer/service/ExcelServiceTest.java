@@ -80,6 +80,29 @@ class ExcelServiceTest {
 
             Sheet sheet1 = workbook.getSheet("Executive Summary");
             assertNotNull(sheet1, "Sheet 1 'Executive Summary' must exist");
+            String metaText = sheet1.getRow(1).getCell(1).getStringCellValue();
+            assertTrue(metaText.startsWith("Generated on "), "Metadata cell must contain timestamp");
+            assertFalse(metaText.toLowerCase().contains("gemini"), "Excel report must NOT contain 'gemini'");
+            assertFalse(metaText.contains("Model:"), "Excel report must NOT contain 'Model:'");
+            assertFalse(metaText.contains("AI Model:"), "Excel report must NOT contain 'AI Model:'");
+
+            // Scan every sheet to guarantee no internal model identifier is exposed anywhere
+            for (int s = 0; s < workbook.getNumberOfSheets(); s++) {
+                Sheet sObj = workbook.getSheetAt(s);
+                for (int r = 0; r <= sObj.getLastRowNum(); r++) {
+                    if (sObj.getRow(r) != null) {
+                        for (int c = 0; c < sObj.getRow(r).getLastCellNum(); c++) {
+                            if (sObj.getRow(r).getCell(c) != null) {
+                                String val = sObj.getRow(r).getCell(c).toString();
+                                assertFalse(val.toLowerCase().contains("gemini-2.5-flash"),
+                                        "Workbook cell must NOT contain 'gemini-2.5-flash': " + val);
+                                assertFalse(val.contains("Model:"),
+                                        "Workbook cell must NOT contain 'Model:': " + val);
+                            }
+                        }
+                    }
+                }
+            }
 
             Sheet sheet2 = workbook.getSheet("CRM Leads");
             assertNotNull(sheet2, "Sheet 2 'CRM Leads' must exist");
