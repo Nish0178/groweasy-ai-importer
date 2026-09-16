@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "GrowEasy AI Importer | Intelligent CRM CSV Field Mapping",
@@ -49,7 +42,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full antialiased", geistSans.variable)}
+      className="h-full antialiased font-sans"
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />

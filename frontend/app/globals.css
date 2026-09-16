@@ -49,6 +49,7 @@
 }
 
 :root {
+  --font-geist-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --background: oklch(0.985 0.005 240);
   --foreground: oklch(0.18 0.02 260);
   --card: oklch(1 0 0);

@@ -53,8 +53,12 @@ export default function UploadSection() {
     confirmImport,
   } = useFileUpload();
 
+  const defaultApiHost =
+    process.env.NODE_ENV === "production"
+      ? "https://groweasy-ai-importer-lctr.onrender.com"
+      : "http://localhost:5000";
   const downloadReportUrl = importResult?.downloadUrl
-    ? `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/+$/, "")}${importResult.downloadUrl}`
+    ? `${(process.env.NEXT_PUBLIC_API_URL || defaultApiHost).replace(/\/+$/, "")}${importResult.downloadUrl}`
     : "#";
 
   return (
