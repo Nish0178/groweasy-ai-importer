@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.groweasy.importer.dto.AiExtractionResponse;
 import com.groweasy.importer.dto.CrmRecord;
+import com.groweasy.importer.dto.ImportErrorItem;
 import com.groweasy.importer.prompt.CrmExtractionPrompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,16 +109,34 @@ public class GeminiService {
         return "";
     }
 
+    public static class GeminiExtractionResult {
+        private final List<CrmRecord> records;
+        private final List<ImportErrorItem> errors;
+
+        public GeminiExtractionResult(List<CrmRecord> records, List<ImportErrorItem> errors) {
+            this.records = records != null ? records : new ArrayList<>();
+            this.errors = errors != null ? errors : new ArrayList<>();
+        }
+
+        public List<CrmRecord> getRecords() {
+            return records;
+        }
+
+        public List<ImportErrorItem> getErrors() {
+            return errors;
+        }
+    }
+
     /**
-     * Processes full CSV records list in batches of 20 and combines extracted CRM records.
+     * Processes CSV records in batches with full error diagnostics and original row correlation.
      */
-    public AiExtractionResponse processCsvRecords(List<Map<String, Object>> records) {
+    public GeminiExtractionResult processRecordsWithDiagnostics(List<Map<String, Object>> records) {
         if (records == null || records.isEmpty()) {
-            return new AiExtractionResponse(Collections.emptyList(), 0);
+            return new GeminiExtractionResult(Collections.emptyList(), Collections.emptyList());
         }
 
         List<CrmRecord> finalRecords = new ArrayList<>();
-        int totalSkipped = 0;
+        List<ImportErrorItem> batchErrors = new ArrayList<>();
 
         int totalBatches = (int) Math.ceil((double) records.size() / BATCH_SIZE);
 
@@ -126,26 +145,58 @@ public class GeminiService {
             List<Map<String, Object>> batch = records.subList(i, endIndex);
 
             int batchNumber = (i / BATCH_SIZE) + 1;
-            log.info("Processing batch {}/{} ({} records)", batchNumber, totalBatches, batch.size());
+            log.info("Processing Gemini batch {}/{} ({} records)", batchNumber, totalBatches, batch.size());
 
             try {
                 AiExtractionResponse result = extractCrmBatch(batch);
                 if (result != null && result.getRecords() != null) {
-                    finalRecords.addAll(result.getRecords());
-                    totalSkipped += result.getSkipped();
-                } else {
-                    totalSkipped += batch.size();
+                    List<CrmRecord> extracted = result.getRecords();
+                    for (int j = 0; j < extracted.size(); j++) {
+                        CrmRecord rec = extracted.get(j);
+                        if (j < batch.size()) {
+                            Map<String, Object> inputRow = batch.get(j);
+                            if (rec.getOriginalRow() == 0 && inputRow.containsKey("__row_number")) {
+                                rec.setOriginalRow(((Number) inputRow.get("__row_number")).intValue());
+                            }
+                            if ((rec.getLeadId() == null || rec.getLeadId().isBlank()) && inputRow.containsKey("__lead_id")) {
+                                rec.setLeadId((String) inputRow.get("__lead_id"));
+                            }
+                        }
+                        if ((rec.getPhone() == null || rec.getPhone().isBlank()) &&
+                                rec.getMobileWithoutCountryCode() != null && !rec.getMobileWithoutCountryCode().isBlank()) {
+                            String code = (rec.getCountryCode() != null && !rec.getCountryCode().isBlank()) ? rec.getCountryCode() + " " : "";
+                            rec.setPhone(code + rec.getMobileWithoutCountryCode());
+                        }
+                        finalRecords.add(rec);
+                    }
                 }
             } catch (Exception e) {
-                log.error("Batch {} failed to process via Gemini: {}", batchNumber, e.getMessage());
-                totalSkipped += batch.size();
-                if (e instanceof IllegalStateException || (e.getMessage() != null && (e.getMessage().contains("403") || e.getMessage().contains("401")))) {
-                    throw new RuntimeException("Gemini API extraction failed: " + e.getMessage(), e);
+                log.error("Batch {}/{} failed in Gemini extraction: {}", batchNumber, totalBatches, e.getMessage());
+                for (Map<String, Object> inputRow : batch) {
+                    int rowNum = inputRow.containsKey("__row_number") ? ((Number) inputRow.get("__row_number")).intValue() : 0;
+                    String identifier = inputRow.containsKey("Name") ? inputRow.get("Name").toString()
+                            : inputRow.containsKey("name") ? inputRow.get("name").toString()
+                            : "Row " + rowNum;
+                    batchErrors.add(new ImportErrorItem(
+                            rowNum,
+                            identifier,
+                            "AI Processing Failure",
+                            e.getMessage() != null ? e.getMessage() : "Gemini extraction failed",
+                            "Retry batch or inspect data encoding."
+                    ));
                 }
             }
         }
 
-        return new AiExtractionResponse(finalRecords, totalSkipped);
+        return new GeminiExtractionResult(finalRecords, batchErrors);
+    }
+
+    /**
+     * Backward-compatible batch processor.
+     */
+    public AiExtractionResponse processCsvRecords(List<Map<String, Object>> records) {
+        GeminiExtractionResult res = processRecordsWithDiagnostics(records);
+        return new AiExtractionResponse(res.getRecords(), res.getErrors().size());
     }
 
     /**

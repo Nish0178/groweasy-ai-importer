@@ -56,8 +56,11 @@ public class CsvService {
                 throw new IllegalArgumentException("CSV does not contain valid headers.");
             }
 
+            int rowNumber = 1; // Header is row 1
             for (CSVRecord record : parser) {
+                rowNumber++;
                 Map<String, Object> row = new LinkedHashMap<>();
+                row.put("__row_number", rowNumber);
                 for (Map.Entry<String, Integer> entry : headerMap.entrySet()) {
                     String header = entry.getKey();
                     if (header != null && !header.isBlank()) {
@@ -66,7 +69,7 @@ public class CsvService {
                         row.put(header, value != null ? value.trim() : "");
                     }
                 }
-                if (!row.isEmpty()) {
+                if (row.size() > 1) { // has at least one actual column besides __row_number
                     rows.add(row);
                 }
             }

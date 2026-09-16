@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ImportResponse {
@@ -12,6 +14,7 @@ public class ImportResponse {
     @JsonProperty("success")
     private boolean success;
 
+    // Backward compatibility aliases
     @JsonProperty("totalImported")
     private int totalImported;
 
@@ -27,17 +30,41 @@ public class ImportResponse {
     @JsonProperty("message")
     private String message;
 
-    public ImportResponse() {
-    }
+    // Professional Intelligence Metrics
+    @JsonProperty("totalRecords")
+    private int totalRecords;
 
-    public static ImportResponse success(int totalImported, int totalSkipped, List<CrmRecord> records, String downloadUrl) {
-        ImportResponse resp = new ImportResponse();
-        resp.setSuccess(true);
-        resp.setTotalImported(totalImported);
-        resp.setTotalSkipped(totalSkipped);
-        resp.setRecords(records);
-        resp.setDownloadUrl(downloadUrl);
-        return resp;
+    @JsonProperty("processedRecords")
+    private int processedRecords;
+
+    @JsonProperty("skippedRecords")
+    private int skippedRecords;
+
+    @JsonProperty("processingPercentage")
+    private double processingPercentage;
+
+    @JsonProperty("duplicateCount")
+    private int duplicateCount;
+
+    @JsonProperty("invalidEmailCount")
+    private int invalidEmailCount;
+
+    @JsonProperty("missingFieldCount")
+    private int missingFieldCount;
+
+    @JsonProperty("averageQualityScore")
+    private double averageQualityScore;
+
+    @JsonProperty("leadStatusDistribution")
+    private Map<String, Integer> leadStatusDistribution = new LinkedHashMap<>();
+
+    @JsonProperty("dataQualitySummary")
+    private Map<String, Object> dataQualitySummary = new LinkedHashMap<>();
+
+    @JsonProperty("errors")
+    private List<ImportErrorItem> errors = new ArrayList<>();
+
+    public ImportResponse() {
     }
 
     public static ImportResponse error(String message) {
@@ -61,6 +88,7 @@ public class ImportResponse {
 
     public void setTotalImported(int totalImported) {
         this.totalImported = totalImported;
+        this.processedRecords = totalImported;
     }
 
     public int getTotalSkipped() {
@@ -69,6 +97,7 @@ public class ImportResponse {
 
     public void setTotalSkipped(int totalSkipped) {
         this.totalSkipped = totalSkipped;
+        this.skippedRecords = totalSkipped;
     }
 
     public List<CrmRecord> getRecords() {
@@ -93,5 +122,95 @@ public class ImportResponse {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public int getTotalRecords() {
+        return totalRecords;
+    }
+
+    public void setTotalRecords(int totalRecords) {
+        this.totalRecords = totalRecords;
+    }
+
+    public int getProcessedRecords() {
+        return processedRecords;
+    }
+
+    public void setProcessedRecords(int processedRecords) {
+        this.processedRecords = processedRecords;
+        this.totalImported = processedRecords;
+    }
+
+    public int getSkippedRecords() {
+        return skippedRecords;
+    }
+
+    public void setSkippedRecords(int skippedRecords) {
+        this.skippedRecords = skippedRecords;
+        this.totalSkipped = skippedRecords;
+    }
+
+    public double getProcessingPercentage() {
+        return processingPercentage;
+    }
+
+    public void setProcessingPercentage(double processingPercentage) {
+        this.processingPercentage = processingPercentage;
+    }
+
+    public int getDuplicateCount() {
+        return duplicateCount;
+    }
+
+    public void setDuplicateCount(int duplicateCount) {
+        this.duplicateCount = duplicateCount;
+    }
+
+    public int getInvalidEmailCount() {
+        return invalidEmailCount;
+    }
+
+    public void setInvalidEmailCount(int invalidEmailCount) {
+        this.invalidEmailCount = invalidEmailCount;
+    }
+
+    public int getMissingFieldCount() {
+        return missingFieldCount;
+    }
+
+    public void setMissingFieldCount(int missingFieldCount) {
+        this.missingFieldCount = missingFieldCount;
+    }
+
+    public double getAverageQualityScore() {
+        return averageQualityScore;
+    }
+
+    public void setAverageQualityScore(double averageQualityScore) {
+        this.averageQualityScore = averageQualityScore;
+    }
+
+    public Map<String, Integer> getLeadStatusDistribution() {
+        return leadStatusDistribution;
+    }
+
+    public void setLeadStatusDistribution(Map<String, Integer> leadStatusDistribution) {
+        this.leadStatusDistribution = leadStatusDistribution != null ? leadStatusDistribution : new LinkedHashMap<>();
+    }
+
+    public Map<String, Object> getDataQualitySummary() {
+        return dataQualitySummary;
+    }
+
+    public void setDataQualitySummary(Map<String, Object> dataQualitySummary) {
+        this.dataQualitySummary = dataQualitySummary != null ? dataQualitySummary : new LinkedHashMap<>();
+    }
+
+    public List<ImportErrorItem> getErrors() {
+        return errors;
+    }
+
+    public void setErrors(List<ImportErrorItem> errors) {
+        this.errors = errors != null ? errors : new ArrayList<>();
     }
 }
