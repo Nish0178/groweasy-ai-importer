@@ -1,0 +1,10 @@
+target/
+.env
+.env.*
+.git/
+.gitignore
+*.log
+.vscode/
+.idea/
+exports/
+uploads/

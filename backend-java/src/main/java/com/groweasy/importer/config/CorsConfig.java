@@ -20,6 +20,7 @@ public class CorsConfig {
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:[*]",
                 "http://127.0.0.1:[*]",
+                "https://groweasy-ai-importer-ten.vercel.app",
                 "https://*.vercel.app",
                 "https://*.onrender.com"
         ));
