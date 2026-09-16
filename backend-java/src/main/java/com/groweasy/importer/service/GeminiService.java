@@ -14,6 +14,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.*;
 
@@ -32,19 +36,76 @@ public class GeminiService {
             @Value("${gemini.api.key:}") String apiKey,
             @Value("${gemini.api.model:gemini-2.5-flash}") String model,
             ObjectMapper objectMapper) {
-        String resolvedKey = (apiKey != null && !apiKey.isBlank()) ? apiKey.trim() : "";
-        if (resolvedKey.isEmpty()) {
-            String envKey = System.getenv("GEMINI_API_KEY");
-            if (envKey != null && !envKey.isBlank()) {
-                resolvedKey = envKey.trim();
-            }
-        }
-        this.apiKey = resolvedKey;
-        this.model = model != null && !model.isBlank() ? model : "gemini-2.5-flash";
+        this.apiKey = resolveApiKey(apiKey);
+        this.model = (model != null && !model.isBlank()) ? model.trim() : "gemini-2.5-flash";
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
+
+        if (this.apiKey.isEmpty()) {
+            log.warn("Gemini API key is not configured. Calls to AI extraction will fail until configured.");
+        } else {
+            log.info("Gemini API configured with model '{}' (API key present).", this.model);
+        }
+    }
+
+    public boolean isConfigured() {
+        return this.apiKey != null && !this.apiKey.isBlank();
+    }
+
+    private String resolveApiKey(String propertyKey) {
+        // 1. Check Spring property injection
+        if (propertyKey != null && !propertyKey.isBlank()) {
+            return propertyKey.trim();
+        }
+
+        // 2. Check System process environment
+        String envKey = System.getenv("GEMINI_API_KEY");
+        if (envKey != null && !envKey.isBlank()) {
+            return envKey.trim();
+        }
+
+        // 3. Check System properties
+        String sysPropKey = System.getProperty("gemini.api.key", System.getProperty("GEMINI_API_KEY"));
+        if (sysPropKey != null && !sysPropKey.isBlank()) {
+            return sysPropKey.trim();
+        }
+
+        // 4. Fallback: Check local .env files
+        List<Path> candidateEnvFiles = List.of(
+                Paths.get(".env"),
+                Paths.get("backend-java", ".env"),
+                Paths.get("..", ".env"),
+                Paths.get("..", "backend", ".env"),
+                Paths.get("backend", ".env")
+        );
+
+        for (Path envPath : candidateEnvFiles) {
+            try {
+                if (Files.exists(envPath) && Files.isRegularFile(envPath)) {
+                    List<String> lines = Files.readAllLines(envPath, StandardCharsets.UTF_8);
+                    for (String line : lines) {
+                        String trimmed = line.trim();
+                        if (trimmed.startsWith("GEMINI_API_KEY=")) {
+                            String value = trimmed.substring("GEMINI_API_KEY=".length()).trim();
+                            if ((value.startsWith("\"") && value.endsWith("\"")) ||
+                                (value.startsWith("'") && value.endsWith("'"))) {
+                                value = value.substring(1, value.length() - 1).trim();
+                            }
+                            if (!value.isEmpty()) {
+                                log.info("Loaded GEMINI_API_KEY from environment file: {}", envPath.toAbsolutePath().normalize());
+                                return value;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not read env file {}: {}", envPath, e.getMessage());
+            }
+        }
+
+        return "";
     }
 
     /**
@@ -120,7 +181,7 @@ public class GeminiService {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            log.error("Gemini API error response HTTP {}", response.statusCode());
+            log.error("Gemini API error HTTP {}: {}", response.statusCode(), response.body());
             throw new RuntimeException("Gemini API call returned status: " + response.statusCode());
         }
 
@@ -131,20 +192,24 @@ public class GeminiService {
         JsonNode candidatesNode = rootNode.path("candidates");
 
         if (candidatesNode.isEmpty()) {
-            throw new RuntimeException("No candidates returned from Gemini.");
+            throw new RuntimeException("No candidates returned from Gemini. Response: " + responseBody);
         }
 
-        JsonNode textNode = candidatesNode.get(0)
-                .path("content")
-                .path("parts")
-                .get(0)
-                .path("text");
-
-        if (textNode.isMissingNode()) {
-            throw new RuntimeException("No text in Gemini candidate part.");
+        StringBuilder fullText = new StringBuilder();
+        JsonNode partsNode = candidatesNode.get(0).path("content").path("parts");
+        if (partsNode.isArray()) {
+            for (JsonNode part : partsNode) {
+                if (part.has("text")) {
+                    fullText.append(part.path("text").asText());
+                }
+            }
         }
 
-        String rawText = textNode.asText();
+        if (fullText.isEmpty()) {
+            throw new RuntimeException("No text in Gemini candidate parts.");
+        }
+
+        String rawText = fullText.toString();
         log.info("========== GEMINI RAW TEXT EXTRACT ==========\n{}", rawText);
 
         // Sanitize markdown fences ```json ... ```
@@ -153,16 +218,26 @@ public class GeminiService {
                 .replaceAll("```", "")
                 .trim();
 
-        // Find outer JSON boundaries
-        int start = cleanedText.indexOf("{");
-        int end = cleanedText.lastIndexOf("}");
+        // Extract JSON boundaries
+        int startObj = cleanedText.indexOf("{");
+        int endObj = cleanedText.lastIndexOf("}");
+        int startArr = cleanedText.indexOf("[");
+        int endArr = cleanedText.lastIndexOf("]");
 
-        if (start == -1 || end == -1 || end <= start) {
-            throw new RuntimeException("Gemini did not return valid JSON object.");
+        AiExtractionResponse parsed;
+        if (startObj != -1 && endObj != -1 && (startArr == -1 || startObj < startArr)) {
+            String jsonPayload = cleanedText.substring(startObj, endObj + 1);
+            parsed = objectMapper.readValue(jsonPayload, AiExtractionResponse.class);
+        } else if (startArr != -1 && endArr != -1) {
+            String jsonPayload = cleanedText.substring(startArr, endArr + 1);
+            List<CrmRecord> records = objectMapper.readValue(
+                    jsonPayload,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, CrmRecord.class)
+            );
+            parsed = new AiExtractionResponse(records, 0);
+        } else {
+            throw new RuntimeException("Gemini did not return a valid JSON payload: " + cleanedText);
         }
-
-        String jsonPayload = cleanedText.substring(start, end + 1);
-        AiExtractionResponse parsed = objectMapper.readValue(jsonPayload, AiExtractionResponse.class);
 
         if (parsed.getRecords() == null) {
             parsed.setRecords(new ArrayList<>());

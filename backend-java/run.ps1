@@ -22,14 +22,32 @@ if (-not (Get-Command mvn -ErrorAction SilentlyContinue)) {
     }
 }
 
-# Ensure GEMINI_API_KEY is in environment if available in ../backend/.env
+# Ensure GEMINI_API_KEY is in environment
 if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
-    $envFile = Join-Path $PSScriptRoot "..\backend\.env"
-    if (Test-Path $envFile) {
-        $keyLine = Get-Content $envFile | Where-Object { $_ -match "^GEMINI_API_KEY=" } | Select-Object -First 1
-        if ($keyLine) {
-            $env:GEMINI_API_KEY = ($keyLine -replace "^GEMINI_API_KEY=", "").Trim()
-            Write-Host "Loaded GEMINI_API_KEY from backend environment." -ForegroundColor Gray
+    $userKey = [System.Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
+    if (-not [string]::IsNullOrWhiteSpace($userKey)) {
+        $env:GEMINI_API_KEY = $userKey.Trim()
+        Write-Host "Loaded GEMINI_API_KEY from User environment." -ForegroundColor Gray
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+    $candidates = @(
+        (Join-Path $PSScriptRoot ".env"),
+        (Join-Path $PSScriptRoot "..\.env"),
+        (Join-Path $PSScriptRoot "..\backend\.env")
+    )
+    foreach ($envFile in $candidates) {
+        if (Test-Path $envFile) {
+            $keyLine = Get-Content $envFile | Where-Object { $_ -match "^GEMINI_API_KEY=" } | Select-Object -First 1
+            if ($keyLine) {
+                $val = ($keyLine -replace "^GEMINI_API_KEY=", "").Trim()
+                if (-not [string]::IsNullOrWhiteSpace($val)) {
+                    $env:GEMINI_API_KEY = $val
+                    Write-Host "Loaded GEMINI_API_KEY from environment file: $envFile" -ForegroundColor Gray
+                    break
+                }
+            }
         }
     }
 }

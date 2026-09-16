@@ -22,6 +22,9 @@
 .DS_Store
 Thumbs.db
 
-# Uploads
+# Uploads & Exports
 backend/uploads/*
 !backend/uploads/.gitkeep
+**/exports/*
+!**/exports/.gitkeep
+!backend-java/exports/crm_records_1789497800753.xlsx
